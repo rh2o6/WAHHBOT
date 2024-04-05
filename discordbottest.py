@@ -47,8 +47,13 @@ async def rob(ctx, recipient:discord.Member):
         datafunctions.updatecoins(thiefbalance,useridentify)
         datafunctions.updatecoins(victimbalance,recepid)
     
+    elif victimbalance < 0:
+        robembed = discord.Embed(title="Robbery Failed",description="Victim is to poor to be robbed. They gotta get they money up not funny up")
+        await ctx.send(embed=robembed)
     else:
-        await ctx.send("Robbery attempt failed, try again")
+        robembed = discord.Embed(title="Robbery Failed",description="You were to slow and they got away")
+        await ctx.send(embed=robembed)
+
     return
 
 @client.command()
