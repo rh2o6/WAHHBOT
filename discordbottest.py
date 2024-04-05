@@ -5,6 +5,7 @@ import random
 import datafunctions
 import content
 import os
+from discord import app_commands
 TOKEN = os.environ.get("bottoken")
 
 intents = discord.Intents.all()
@@ -18,19 +19,22 @@ robcooldowns = {}
 @client.event
 async def on_ready():
     print("Bots ready")
+    synced = await client.tree.sync()
+    print (f"Synced {len(synced)} commands")
 
 
 
 
-@client.command()
-async def rob(ctx, recipient:discord.Member):
-    datafunctions.userdbcheck(ctx.message.author.id)
-    recep = recipient
+@client.tree.command()
+@app_commands.describe(robvictim="Enter rob target")
+async def rob(interaction:discord.Interaction, robvictim:discord.Member):
+    datafunctions.userdbcheck(interaction.user.id)
+    recep = robvictim
     recepid = recep.id
     datafunctions.userdbcheck(recepid)
     robstatus = False
     robcheck = random.randint(1,4)
-    useridentify = ctx.message.author.id
+    useridentify = interaction.user.id
     thiefbalance = datafunctions.checkcoins(useridentify)
     victimbalance = datafunctions.checkcoins(recepid)
 
@@ -41,7 +45,7 @@ async def rob(ctx, recipient:discord.Member):
         
         robembed = discord.Embed(title = "Robbery Success!",description=f"Successfuly stole {content.coinemoji} {victimbalance//10} from <@{recep}>")
         robembed.set_image(url="https://i.ytimg.com/vi/dISuBAGxw4w/maxresdefault.jpg")
-        await ctx.send(embed=robembed)
+        await interaction.response.send_message(embed=robembed)
         thiefbalance += victimbalance // 10
         victimbalance -= victimbalance // 10
         datafunctions.updatecoins(thiefbalance,useridentify)
@@ -49,51 +53,56 @@ async def rob(ctx, recipient:discord.Member):
     
     elif victimbalance < 0:
         robembed = discord.Embed(title="Robbery Failed",description="Victim is to poor to be robbed. They gotta get they money up not funny up")
-        await ctx.send(embed=robembed)
+        await interaction.response.send_message(embed=robembed)
     else:
         robembed = discord.Embed(title="Robbery Failed",description="You were to slow and they got away")
-        await ctx.send(embed=robembed)
+        await interaction.response.send_message(embed=robembed)
 
     return
 
-@client.command()
-async def checkworkcd(ctx):
-    user_id = ctx.message.author.id
-    await ctx.send(workcooldowns[user_id])
 
 
-@client.command()
-async def gamble(ctx):
-    useridentify = ctx.message.author.id
+@client.tree.command()
+@app_commands.describe(betamt = "Enter amount to gamble")
+async def gamble(interaction:discord.Interaction,betamt:int):
+    useridentify = interaction.user.id
     datafunctions.userdbcheck(useridentify)
     data = datafunctions.checkcoins(useridentify)
+    
 
-    if  data < 50:
-        await ctx.send("To poor to gamble")
+    if betamt < 0:
+        await interaction.response.send_message("Invalid bet amount")
+
+    elif  data < betamt:
+        await interaction.response.send_message("To poor to gamble")
         return
 
-    data -= 10
-    roll = random.randint(-100,100)
+    roll = random.randint(1,2)
     dictbool = {True:"Won",False:"Lost"}
-    if roll < 0:
+    if roll == 1:
         status = False
     else:
         status = True
-    mystr = f"You {dictbool[status]} {content.coinemoji}{abs(roll)}"
-    embed = discord.Embed(title="Rolling...",description=mystr,color=0x4dff4d)
-    #embed.set_author(name="Skibidi Toilet")
-    #embed.add_field(name="",value = "Field 1 Description!",inline = True)
+
+    if status == True:
+        final = data + betamt*2
+        mystr = f"You Won {content.coinemoji}{betamt*2}"
+    else:
+        status == False
+        final = data - betamt
+        mystr = f"You Lost {content.coinemoji}{betamt}"
+    
+    embed = discord.Embed(title="Rolling...",description=f'{mystr}',color=0x4dff4d)
     embed.set_footer(text="Did you know that 99%, of gamblers give up before a jackpot!")
     embed.set_image(url = "https://static.wikia.nocookie.net/siivagunner/images/e/e0/Waluigi-Pinball.png/revision/latest?cb=20200515232537")
-    await ctx.send(embed=embed)
-    final = data + roll
     datafunctions.updatecoins(final,useridentify)
+    await interaction.response.send_message(embed=embed)
 
 
 
-@client.command()
-async def work(ctx):
-    useridentify = ctx.message.author.id
+@client.tree.command(name="work")
+async def work(interaction:discord.Interaction):
+    useridentify = interaction.user.id
     datafunctions.userdbcheck(useridentify)
     existingcoins = datafunctions.checkcoins(useridentify)
     jobselect = random.choice(workoptions)
@@ -105,7 +114,7 @@ async def work(ctx):
             remaining_time = 300 - time_passed
             # Format remaining time into minutes and seconds
             minutes, seconds = divmod(int(remaining_time), 60)
-            await ctx.send(f"You're on cooldown. Please wait {minutes} minutes and {seconds} seconds before working again.")
+            await interaction.response.send_message(f"You're on cooldown. Please wait {minutes} minutes and {seconds} seconds before working again.")
             return
         else:
             # If cooldown is over, delete the user from cooldowns
@@ -113,7 +122,7 @@ async def work(ctx):
     workstr = f"You made <a:Coin:1224446854708727908>{earnings}"
     workembed = discord.Embed(title="Off to work!",description=workstr,color =0x4dff4d)
     workembed.set_footer(text=f"Worked a shift as a {jobselect}")
-    await ctx.send(embed=workembed)
+    await interaction.response.send_message(embed=workembed)
     datafunctions.updatecoins(earnings+existingcoins, useridentify)
     currentshifts = datafunctions.checktotalshifts(useridentify)
     if currentshifts == None:
@@ -124,9 +133,9 @@ async def work(ctx):
     workcooldowns[useridentify] = time.time()
     
 
-@client.command()
-async def balance(ctx):
-    useridentify = ctx.message.author.id
+@client.tree.command()
+async def balance(interaction: discord.Interaction):
+    useridentify = interaction.user.id
     datafunctions.userdbcheck(useridentify)
     balance = datafunctions.checkcoins(useridentify)
 
@@ -145,43 +154,44 @@ async def balance(ctx):
     bankembed = discord.Embed(title=f"{content.coinemoji}Bank Balance:", description=f"{content.coinemoji}{str(balance)}", color=0x4dff4d)
     view = discord.ui.View()
     view.add_item(refreshbutton)
-    await ctx.send(embed=bankembed, view=view)
+    await interaction.response.send_message(embed=bankembed, view=view)
 
 
 
-@client.command()
-async def register(ctx):
-    useridentify = ctx.message.author.id
+@client.tree.command()
+async def register(interaction: discord.Interaction):
+    useridentify = interaction.user.id
     datafunctions.userdbcheck(useridentify)
     regembed = discord.Embed(title="New User Registration",description = "Congrats! You are now Registerd",color=content.purple)
     regembed.set_image(url='https://www.kotaku.com.au/wp-content/uploads/2018/06/15/umkr4qwixrkw7txyv40m.jpg?quality=75&w=640&h=360&crop=1')
-    await ctx.send(embed=regembed)
+    await interaction.response.send_message(embed=regembed)
 
 
 
-@client.command()
-async def transfer(ctx, amount: int, recipient: discord.Member):
-    sender = ctx.author
-    datafunctions.userdbcheck(sender.id)
+@client.tree.command()
+@app_commands.describe(recipient = "Enter person you want to transfer coins to",transferamount = "Enter amount to transfer")
+async def transfer(interaction:discord.Interaction, recipient: discord.Member,transferamount:int):
+    sender = interaction
+    datafunctions.userdbcheck(sender.user.id)
     datafunctions.userdbcheck(recipient.id)
-    sender_balance = datafunctions.checkcoins(sender.id)
+    sender_balance = datafunctions.checkcoins(sender.user.id)
     recipient_balance = datafunctions.checkcoins(recipient.id)
     fail_embed = discord.Embed(title="Transfer Failed", description="Transfer has failed since you don't have enough money to transfer the requested amount.")
     fail_embed.set_image(url='https://i.redd.it/9bpmrcwpa7ra1.jpg')
     
-    if amount <= 0:
-        await ctx.send("Please enter a valid amount to transfer.")
+    if transferamount <= 0:
+        await interaction.response.send_message("Please enter a valid amount to transfer.")
         return
 
-    if sender_balance < amount:
-        await ctx.send(embed=fail_embed)
+    if sender_balance < transferamount:
+        await interaction.response.send_message(embed=fail_embed)
     else:
-        sender_balance -= amount
-        recipient_balance += amount
-        datafunctions.updatecoins(sender_balance, sender.id)
+        sender_balance -= transferamount
+        recipient_balance += transferamount
+        datafunctions.updatecoins(sender_balance, sender.user.id)
         datafunctions.updatecoins(recipient_balance, recipient.id)
-        transfer_embed = discord.Embed(title="Transfer Success!", description=f"You have transferred {content.coinemoji} {amount} to {recipient.mention}!")
-        await ctx.send(embed=transfer_embed)
+        transfer_embed = discord.Embed(title="Transfer Success!", description=f"You have transferred {content.coinemoji} {transferamount} to {recipient.mention}!")
+        await interaction.response.send_message(embed=transfer_embed)
     
 
 
