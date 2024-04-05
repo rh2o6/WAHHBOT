@@ -2,8 +2,9 @@ import psycopg2;
 import os
 
 dbpass = os.environ.get('dbpass')
+dbname = os.environ.get('dbname')
 def opencon():
-    connection = psycopg2.connect(host="localhost",dbname="discordbot",user = "postgres",password=dbpass,port=5432)
+    connection = psycopg2.connect(host="localhost",dbname=dbname,user = "postgres",password=dbpass,port=5432)
     return connection
 
 def closecon(cn):
