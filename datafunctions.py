@@ -41,6 +41,20 @@ def updatecoins(amt,user_id):
     cur.close()
     conn.close()
 
+def updatebank(amt,user_id):
+    conn = opencon()
+    cur = conn.cursor()
+    cur.execute("""
+                UPDATE discordusers
+                SET bankbalance = %s
+                WHERE id = %s;
+                """,(amt,user_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+
 def workadjust(amt,user_id):
     conn = opencon()
     cur = conn.cursor()
@@ -63,6 +77,30 @@ def checkcoins(user_id):
     closecon(cc)
     balance = data[0]
     return balance
+
+def checkbankbal(user_id):
+    cc = opencon()
+    cr = cc.cursor()
+    cr.execute("""SELECT bankbalance FROM discordusers WHERE id = %s""",(user_id,))
+    data = cr.fetchone()
+    cr.close()
+    closecon(cc)
+    balance = data[0]
+    return balance
+
+
+def checkbanklvl(user_id):
+    cc = opencon()
+    cr = cc.cursor()
+    cr.execute("""SELECT banklvl FROM discordusers WHERE id = %s""",(user_id,))
+    data = cr.fetchone()
+    cr.close()
+    closecon(cc)
+    balance = data[0]
+    return balance
+
+
+
 
 def checktotalshifts(user_id):
     cc = opencon()
