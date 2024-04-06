@@ -37,7 +37,18 @@ async def rob(interaction:discord.Interaction, robvictim:discord.Member):
     useridentify = interaction.user.id
     thiefbalance = datafunctions.checkcoins(useridentify)
     victimbalance = datafunctions.checkcoins(recepid)
-
+    if useridentify in robcooldowns:
+        time_passed = time.time() - robcooldowns[useridentify]
+        if time_passed < content.ROBCD:
+            # Calculate remaining time
+            remaining_time = content.ROBCD - time_passed
+            # Format remaining time into minutes and seconds
+            minutes, seconds = divmod(int(remaining_time), 60)
+            await interaction.response.send_message(f"You're on cooldown. Please wait {minutes} minutes and {seconds} seconds before working again.")
+            return
+        else:
+            # If cooldown is over, delete the user from cooldowns
+            del robcooldowns[useridentify]
 
     if robcheck == 1:
         robstatus = True
@@ -50,12 +61,14 @@ async def rob(interaction:discord.Interaction, robvictim:discord.Member):
         victimbalance -= victimbalance // 10
         datafunctions.updatecoins(thiefbalance,useridentify)
         datafunctions.updatecoins(victimbalance,recepid)
+        robcooldowns[useridentify] = time.time()
     
     elif victimbalance < 0:
         robembed = discord.Embed(title="Robbery Failed",description="Victim is to poor to be robbed. They gotta get they money up not funny up")
         await interaction.response.send_message(embed=robembed)
     else:
         robembed = discord.Embed(title="Robbery Failed",description="You were to slow and they got away")
+        robcooldowns[useridentify] = time.time()
         await interaction.response.send_message(embed=robembed)
 
     return
@@ -109,9 +122,9 @@ async def work(interaction:discord.Interaction):
     earnings = random.randint(20,50)
     if useridentify in workcooldowns:
         time_passed = time.time() - workcooldowns[useridentify]
-        if time_passed < 300:
+        if time_passed < content.WORKCD:
             # Calculate remaining time
-            remaining_time = 300 - time_passed
+            remaining_time = content.WORKCD - time_passed
             # Format remaining time into minutes and seconds
             minutes, seconds = divmod(int(remaining_time), 60)
             await interaction.response.send_message(f"You're on cooldown. Please wait {minutes} minutes and {seconds} seconds before working again.")
@@ -142,10 +155,18 @@ async def balance(interaction: discord.Interaction):
     async def button_callback(interaction):
         # Assuming this inner function can access 'useridentify' directly
         # Recalculate the balance in case it has changed
-        new_balance = datafunctions.checkcoins(useridentify)
-        new_embed = discord.Embed(title=f"{content.coinemoji}Bank Balance:", description=f"{content.coinemoji}{str(new_balance)}", color=0x4dff4d)
-        # Acknowledge the interaction by editing the message with the new embed
-        await interaction.response.edit_message(embed=new_embed, view=view)
+
+        if interaction.user.id == useridentify:
+            new_balance = datafunctions.checkcoins(useridentify)
+            new_embed = discord.Embed(title=f"{content.coinemoji}Bank Balance:", description=f"{content.coinemoji}{str(new_balance)}", color=0x4dff4d)
+            # Acknowledge the interaction by editing the message with the new embed
+            await interaction.response.edit_message(embed=new_embed, view=view)
+        else:
+           await interaction.response.send_message("Not for you!",ephemeral=True)
+
+
+
+       
 
     # Button creation with the callback function
     refreshbutton = discord.ui.Button(style=discord.ButtonStyle.primary, label="Check Again", custom_id="check_balance")
@@ -176,14 +197,19 @@ async def transfer(interaction:discord.Interaction, recipient: discord.Member,tr
     datafunctions.userdbcheck(recipient.id)
     sender_balance = datafunctions.checkcoins(sender.user.id)
     recipient_balance = datafunctions.checkcoins(recipient.id)
-    fail_embed = discord.Embed(title="Transfer Failed", description="Transfer has failed since you don't have enough money to transfer the requested amount.")
-    fail_embed.set_image(url='https://i.redd.it/9bpmrcwpa7ra1.jpg')
+    mystr = ''
     
     if transferamount <= 0:
-        await interaction.response.send_message("Please enter a valid amount to transfer.")
+        mystr ='Please enter a valid amount of coins to transfer'
+        fail_embed = discord.Embed(title="Transfer Failed", description=mystr)
+        fail_embed.set_image(url='https://i.redd.it/9bpmrcwpa7ra1.jpg')
+        await interaction.response.send_message(embed=fail_embed)
         return
 
     if sender_balance < transferamount:
+        mystr = "Transfer has failed since you don't have enough money to transfer the requested amount."
+        fail_embed = discord.Embed(title="Transfer Failed", description=mystr)
+        fail_embed.set_image(url='https://i.redd.it/9bpmrcwpa7ra1.jpg')
         await interaction.response.send_message(embed=fail_embed)
     else:
         sender_balance -= transferamount

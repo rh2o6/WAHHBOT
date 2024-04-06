@@ -8,5 +8,7 @@ coinemoji = "<a:Coin:1224446854708727908>"
 
 green = 0x4dff4d
 purple = 800080
+WORKCD = 300
+ROBCD = 600
 
 
