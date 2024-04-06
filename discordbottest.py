@@ -13,7 +13,7 @@ client = commands.Bot(command_prefix="!",intents=intents)
 workoptions = ["Pipe Cleaner","King Koopa's Underling","Koopa Smasher (but not in a gay way)","Waa Inspector","Plumber","Carpenter"]
 workcooldowns = {}
 gamblecooldowns= {}
-robcooldowns = {}
+gamblecooldowns = {}
 
 # Initiate Bot stuff
 @client.event
@@ -37,18 +37,18 @@ async def rob(interaction:discord.Interaction, robvictim:discord.Member):
     useridentify = interaction.user.id
     thiefbalance = datafunctions.checkcoins(useridentify)
     victimbalance = datafunctions.checkcoins(recepid)
-    if useridentify in robcooldowns:
-        time_passed = time.time() - robcooldowns[useridentify]
-        if time_passed < content.ROBCD:
+    if useridentify in gamblecooldowns:
+        time_passed = time.time() - gamblecooldowns[useridentify]
+        if time_passed < content.GAMBLECD:
             # Calculate remaining time
-            remaining_time = content.ROBCD - time_passed
+            remaining_time = content.GAMBLECD - time_passed
             # Format remaining time into minutes and seconds
             minutes, seconds = divmod(int(remaining_time), 60)
             await interaction.response.send_message(f"You're on cooldown. Please wait {minutes} minutes and {seconds} seconds before attempting to rob again.")
             return
         else:
             # If cooldown is over, delete the user from cooldowns
-            del robcooldowns[useridentify]
+            del gamblecooldowns[useridentify]
 
     if robcheck == 1:
         robstatus = True
@@ -61,14 +61,14 @@ async def rob(interaction:discord.Interaction, robvictim:discord.Member):
         victimbalance -= victimbalance // 10
         datafunctions.updatecoins(thiefbalance,useridentify)
         datafunctions.updatecoins(victimbalance,recepid)
-        robcooldowns[useridentify] = time.time()
+        gamblecooldowns[useridentify] = time.time()
     
     elif victimbalance < 0:
         robembed = discord.Embed(title="Robbery Failed",description="Victim is to poor to be robbed. They gotta get they money up not funny up")
         await interaction.response.send_message(embed=robembed)
     else:
         robembed = discord.Embed(title="Robbery Failed",description="You were to slow and they got away")
-        robcooldowns[useridentify] = time.time()
+        gamblecooldowns[useridentify] = time.time()
         await interaction.response.send_message(embed=robembed)
 
     return
@@ -90,6 +90,22 @@ async def gamble(interaction:discord.Interaction,betamt:int):
         await interaction.response.send_message("To poor to gamble")
         return
 
+
+    if useridentify in gamblecooldowns:
+        time_passed = time.time() - gamblecooldowns[useridentify]
+        if time_passed < content.GAMBLECD:
+            # Calculate remaining time
+            remaining_time = content.GAMBLECD - time_passed
+            # Format remaining time into minutes and seconds
+            minutes, seconds = divmod(int(remaining_time), 60)
+            await interaction.response.send_message(f"You're on cooldown. Please wait {minutes} minutes and {seconds} seconds before attempting to gamble again.")
+            return
+        else:
+            # If cooldown is over, delete the user from cooldowns
+            del gamblecooldowns[useridentify]
+
+
+
     roll = random.randint(1,2)
     dictbool = {True:"Won",False:"Lost"}
     if roll == 1:
@@ -109,6 +125,7 @@ async def gamble(interaction:discord.Interaction,betamt:int):
     embed.set_footer(text="Did you know that 99%, of gamblers give up before a jackpot!")
     embed.set_image(url = "https://static.wikia.nocookie.net/siivagunner/images/e/e0/Waluigi-Pinball.png/revision/latest?cb=20200515232537")
     datafunctions.updatecoins(final,useridentify)
+    gamblecooldowns[useridentify] = time.time()
     await interaction.response.send_message(embed=embed)
 
 
