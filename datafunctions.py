@@ -122,7 +122,7 @@ def adduser(user_id):
     conn = opencon()
     cur = conn.cursor()
     # Assuming a very simple table structure; adjust as necessary.
-    cur.execute("INSERT INTO discordusers (id, coins) VALUES (%s, %s);", (user_id, 0))
+    cur.execute("INSERT INTO discordusers (id, coins, banklvl, bankbalance) VALUES (%s, %s,%s,%s);", (user_id, 0,1,0))
     conn.commit()
     cur.close()
     conn.close()

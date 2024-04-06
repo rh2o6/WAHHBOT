@@ -13,6 +13,7 @@ purple = 800080
 ###################################### Constants
 WORKCD = 300
 ROBCD = 600
+GAMBLECD = 400
 
 bankupgeq = {1:1000}
 bankitemreq = {1:[]}
