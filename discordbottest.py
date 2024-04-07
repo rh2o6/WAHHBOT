@@ -247,7 +247,7 @@ async def deposit(interaction:discord.Interaction,depositamt:int):
     banklvl = datafunctions.checkbanklvl(useridentify)
     newbal = currentbal + depositamt
     if newbal > content.maxbankbalance[banklvl]:
-        await interaction.repsonse.send_message("Deposit will exceed bank capacity, try again with a lower amount")
+        await interaction.response.send_message("Deposit will exceed bank capacity, try again with a lower amount")
     elif depositamt > usercoins:
         await interaction.response.send_message("Deposit failed, not enough coins to depoist that amount")
 
