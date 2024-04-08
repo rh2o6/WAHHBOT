@@ -23,6 +23,61 @@ async def on_ready():
     print (f"Synced {len(synced)} commands")
 
 
+class depositModal(discord.ui.Modal,title="Bank Deposit"):
+    depositamount = discord.ui.TextInput(label="Enter amount to deposit",placeholder="Enter money here",style=discord.TextStyle.short)
+
+    async def on_submit(self,interaction:discord.Interaction):
+        if not(self.depositamount.value.isnumeric()):
+            await interaction.response.send_message("Invalid Amount, Please enter a valid amount")
+        depositamt = int(self.depositamount.value)
+        useridentify = interaction.user.id
+        usercoins = datafunctions.checkcoins(useridentify)
+        currentbal = datafunctions.checkbankbal(useridentify)
+        banklvl = datafunctions.checkbanklvl(useridentify)
+        newbal = currentbal + depositamt
+        if newbal > content.maxbankbalance[banklvl]:
+            await interaction.response.send_message("Deposit will exceed bank capacity, try again with a lower amount")
+        elif depositamt > usercoins:
+            await interaction.response.send_message("Deposit failed, not enough coins to depoist that amount")
+
+        elif depositamt < 0:
+            await interaction.response.send_message("Invalid Amount, Please enter a valid amount")
+
+        else:
+            newcoinsval = usercoins - depositamt
+            datafunctions.updatecoins(newcoinsval,useridentify)
+            datafunctions.updatebank(newbal,useridentify)
+
+            await interaction.response.send_message("Deposit Successful")
+
+
+class withdrawModal(discord.ui.Modal,title="Bank Withdraw"):
+    withdrawamt = discord.ui.TextInput(label="Enter amount to withdraw",placeholder="Enter money here",style=discord.TextStyle.short)
+
+    async def on_submit(self,interaction:discord.Interaction):
+        useridentify = interaction.user.id
+
+        if not(self.withdrawamt.value.isnumeric()):
+            await interaction.response.send_message("Invalid Amount, Please enter a valid amount")
+
+
+        withdrawamt = int(self.withdrawamt.value)
+        currentbal = datafunctions.checkbankbal(useridentify)
+        banklvl = datafunctions.checkbanklvl(useridentify)
+        usercoins = datafunctions.checkcoins(useridentify)
+        newbal = currentbal - withdrawamt
+        if newbal < 0:
+            await interaction.response.send_message("Withdraw failed, insufficient balance to withdraw amount")
+        
+        elif withdrawamt < 0:
+            await interaction.response.send_message("Invalid Amount, Please enter a valid amount")
+
+        else:
+            datafunctions.updatebank(newbal,useridentify)
+            usercoins += withdrawamt
+            datafunctions.updatecoins(usercoins,useridentify)
+        
+            await interaction.response.send_message("Withdrawl Successful")
 
 
 @client.tree.command()
@@ -171,29 +226,50 @@ async def balance(interaction: discord.Interaction):
     bankbalance = datafunctions.checkbankbal(useridentify)
     banklvl = datafunctions.checkbanklvl(useridentify)
 
-    async def button_callback(interaction):
+    async def refresh_callback(interaction):
         # Assuming this inner function can access 'useridentify' directly
         # Recalculate the balance in case it has changed
 
         if interaction.user.id == useridentify:
             new_balance = datafunctions.checkcoins(useridentify)
-            new_embed = discord.Embed(title=f"{content.coinemoji}{interaction.user} Currency:", description=f"**Coins**:\n{content.coinemoji}{str(new_balance)} \n **Bank Balance**: \n{bankbalance}/{content.maxbankbalance[banklvl]}\n**Bank Level**:{banklvl}", color=0x4dff4d)
+            newbankbal = datafunctions.checkbankbal(useridentify)
+            new_embed = discord.Embed(title=f"{content.coinemoji}{interaction.user} Currency:", description=f"**Coins**:\n{content.coinemoji}{str(new_balance)} \n **Bank Balance**: \n{newbankbal}/{content.maxbankbalance[banklvl]}\n**Bank Level**:{banklvl}", color=0x4dff4d)
             # Acknowledge the interaction by editing the message with the new embed
             await interaction.response.edit_message(embed=new_embed, view=view)
         else:
            await interaction.response.send_message("Not for you!",ephemeral=True)
 
 
-
+    async def deposit_callback(interaction):
+        if interaction.user.id == useridentify:
+            await interaction.response.send_modal(depositModal())
+        else:
+           await interaction.response.send_message("Not for you!",ephemeral=True)
+    
+    async def withdraw_callback(interaction):
+        if interaction.user.id == useridentify:
+            await interaction.response.send_modal(withdrawModal())
+        else:
+            await interaction.response.send_message("Not for you!",ephemeral=True)
+            
        
 
     # Button creation with the callback function
-    refreshbutton = discord.ui.Button(style=discord.ButtonStyle.primary, label="Check Again", custom_id="check_balance")
-    refreshbutton.callback = button_callback  # Assign the callback
+    refreshbutton = discord.ui.Button(style=discord.ButtonStyle.primary, label="Refresh", custom_id="check_balance")
+    refreshbutton.callback = refresh_callback  # Assign the callback
+
+    depositbutton = discord.ui.Button(style=discord.ButtonStyle.blurple,label="Deposit")
+    depositbutton.callback = deposit_callback
+
+    withdrawbutton = discord.ui.Button(style=discord.ButtonStyle.blurple,label="Withdraw")
+    withdrawbutton.callback = withdraw_callback
+
 
     bankembed = discord.Embed(title=f"{content.coinemoji}{interaction.user} Currency:", description=f"**Coins**:\n{content.coinemoji}{str(balance)} \n **Bank Balance**: \n{bankbalance}/{content.maxbankbalance[banklvl]}\n **Bank Level**: {banklvl}", color=0x4dff4d)
     view = discord.ui.View()
     view.add_item(refreshbutton)
+    view.add_item(depositbutton)
+    view.add_item(withdrawbutton)
     await interaction.response.send_message(embed=bankembed, view=view)
 
 
@@ -238,27 +314,7 @@ async def transfer(interaction:discord.Interaction, recipient: discord.Member,tr
         transfer_embed = discord.Embed(title="Transfer Success!", description=f"You have transferred {content.coinemoji} {transferamount} to {recipient.mention}!")
         await interaction.response.send_message(embed=transfer_embed)
     
-@client.tree.command()
-@app_commands.describe(depositamt = "Enter amount to deposit to bank")
-async def deposit(interaction:discord.Interaction,depositamt:int):
-    useridentify = interaction.user.id
-    usercoins = datafunctions.checkcoins(useridentify)
-    currentbal = datafunctions.checkbankbal(useridentify)
-    banklvl = datafunctions.checkbanklvl(useridentify)
-    newbal = currentbal + depositamt
-    if newbal > content.maxbankbalance[banklvl]:
-        await interaction.response.send_message("Deposit will exceed bank capacity, try again with a lower amount")
-    elif depositamt > usercoins:
-        await interaction.response.send_message("Deposit failed, not enough coins to depoist that amount")
 
-    else:
-        datafunctions.updatebank(newbal,useridentify)
-        await interaction.response.send_message("Deposit Successful")
-
-
-@client.tree.command()
-@app_commands.describe(withdrawamt = "Enter amount to deposit to bank")
-async def withdraw(interaction:discord.Interaction,withdrawamt:int):
     useridentify = interaction.user.id
     currentbal = datafunctions.checkbankbal(useridentify)
     banklvl = datafunctions.checkbanklvl(useridentify)
