@@ -3,9 +3,12 @@ import os
 
 dbpass = os.environ.get('dbpass')
 dbname = os.environ.get('dbname')
+
+
 def opencon():
     connection = psycopg2.connect(host="localhost",dbname=dbname,user = "postgres",password=dbpass,port=5432)
     return connection
+
 
 def closecon(cn):
     cn.close()
@@ -137,3 +140,25 @@ def userexists(user_id):
     cur.close()
     conn.close()
     return exists
+
+def updatefishbucket(user_id:int,fishtostore:str,fishamt:int):
+    conn = opencon()
+    cur = conn.cursor()
+    cur.execute("UPDATE fishbucket SET %s = %s WHERE id = %s",(fishtostore,fishamt,user_id))
+    cur.close()
+    conn.close()
+
+def checkfishamt(user_id:int, fishtocheck:str):
+    conn = opencon()
+    cur = conn.cursor()
+    cur.execute("SELECT %s from fishbucket WHERE id = %s",(fishtocheck,user_id))
+
+def checkrod(user_id:int):
+    conn = opencon()
+    cur = conn.cursor()
+    cur.execute("SELECT rodtype FROM inventory where id = %s",(user_id,))
+    data = cur.fetchone()
+    cur.close()
+    closecon(conn)
+    balance = data[0]
+    return balance

@@ -1,15 +1,25 @@
+#Discord API
 import discord
 from discord.ext import commands
+
+#Standard Module Imports
 import time
 import random
+
+#File Imports
 import datafunctions
 import content
+
+
 import os
 from discord import app_commands
-TOKEN = os.environ.get("bottoken")
+TOKEN = os.environ.get("bottoken") #String for Bot Token
+
+
 
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix="!",intents=intents)
+
 workoptions = ["Pipe Cleaner","King Koopa's Underling","Koopa Smasher (but not in a gay way)","Waa Inspector","Plumber","Carpenter"]
 workcooldowns = {}
 gamblecooldowns= {}
@@ -281,6 +291,24 @@ async def register(interaction: discord.Interaction):
     regembed = discord.Embed(title="New User Registration",description = "Congrats! You are now Registerd",color=content.purple)
     regembed.set_image(url='https://www.kotaku.com.au/wp-content/uploads/2018/06/15/umkr4qwixrkw7txyv40m.jpg?quality=75&w=640&h=360&crop=1')
     await interaction.response.send_message(embed=regembed)
+
+
+@client.tree.command()
+async def fish(interaction: discord.Interaction):
+    useridentify = interaction.user.id
+    catchornot = random.randint(1,2)
+    rodtype = datafunctions.checkrod(useridentify)
+    if catchornot == 1:
+        failembed = discord.Embed(title="Caught Nothing",description="Unlucky, Nothing bit...")
+        await interaction.response.send_message(embed=failembed)
+
+    else:
+        fishtier = content.fish_roll(content.fishchances)
+        fishcaught = random.choice(content.fishcategories[fishtier])
+        #quant = datafunctions.checkfishamt(useridentify,fishcaught)
+        #quant += 1
+        #datafunctions.updatefishbucket(useridentify,fishcaught,quant)
+        await interaction.response.send_message(f"Congrats You Caught a {content.fishemojis[fishcaught]}{content.fishpropernames[fishcaught]} of {fishtier} Rarity with your {rodtype}!")
 
 
 
